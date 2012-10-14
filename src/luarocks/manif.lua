@@ -1,4 +1,3 @@
-
 --- Module for handling manifest files and tables.
 -- Manifest files describe the contents of a LuaRocks tree or server.
 -- They are loaded into manifest tables, which are then used for
@@ -33,7 +32,18 @@ local function save_table(where, name, tbl)
    local filename = dir.path(where, name)
    local ok, err = persist.save_from_table(filename..".tmp", tbl)
    if ok then
-      ok, err = os.rename(filename..".tmp", filename)
+      ok, err, errno = os.remove(filename..".bak")
+      if ok or errno == 2 then
+         ok, err = os.rename(filename, filename..".bak")
+         if ok or errno == 2 then
+            ok, err = os.rename(filename..".tmp", filename)
+            if not ok then
+               -- try to restore the original manifest, ignore errors
+               os.remove(filename)
+               os.rename(filename..".bak", filename)
+            end
+         end
+      end
    end
    return ok, err
 end
